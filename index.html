@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Une journée à la mairie</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Un jeu sérieux pour comprendre, en une journée de travail, ce qui freine la coopération entre les services d’une ville. Tiré de dix entretiens avec des agents de Tourcoing.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout : un téléphone qu'on fait défiler. Barre d'état collante (heure + 3 jauges), une colonne de lecture au pouce, élargie en deux colonnes sur grand écran. */
+:root{
+  --paper:#E9EDF1;      /* fond : gris bleuté de bureau */
+  --surface:#FFFFFF;    /* écrans, cartes */
+  --ink:#152033;        /* encre administrative */
+  --muted:#596577;
+  --line:#CDD4DD;
+  --projet:#2D57C8;     /* jauge Projet */
+  --energie:#C98A00;    /* jauge Énergie */
+  --regles:#2E7A58;     /* jauge Dans les règles */
+  --stop:#B9382A;       /* blocage, sans réponse */
+  --stop-soft:#F7E1DC;
+  --note:#FFE9A8;       /* post-it, imprévu */
+  --tint:#DCE4F4;
+  --f-display:"Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D131B; --surface:#17202B; --ink:#E6EBF1; --muted:#9AA7B6; --line:#2A3644;
+    --projet:#7E9EF5; --energie:#F0B73A; --regles:#5CC497; --stop:#F2826E; --stop-soft:#3A1E19;
+    --note:#4A3C12; --tint:#1E2A3D; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D131B; --surface:#17202B; --ink:#E6EBF1; --muted:#9AA7B6; --line:#2A3644;
+  --projet:#7E9EF5; --energie:#F0B73A; --regles:#5CC497; --stop:#F2826E; --stop-soft:#3A1E19;
+  --note:#4A3C12; --tint:#1E2A3D; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 1.0625rem/1.55 var(--f-body)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button{font:inherit;color:inherit}
+a{color:var(--projet)}
+:focus-visible{outline:3px solid var(--projet);outline-offset:2px;border-radius:6px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.1;margin:0}
+p{margin:0}
+
+/* Barre d'état */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:.5rem}
+.bar-in{max-width:62rem;margin:0 auto;display:grid;grid-template-columns:auto 1fr;gap:.25rem 1rem;align-items:center}
+.clock{font:600 1.35rem/1 var(--f-mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.clock small{display:block;font:500 .66rem/1.2 var(--f-mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:.2rem}
+.gauges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem}
+.g{min-width:0}
+.g-top{display:flex;justify-content:space-between;gap:.25rem;font:500 .68rem/1.2 var(--f-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.g-top b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.g-track{height:.45rem;border-radius:99px;background:var(--line);overflow:hidden;margin-top:.25rem}
+.g-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.g.p .g-fill{background:var(--projet)} .g.e .g-fill{background:var(--energie)} .g.r .g-fill{background:var(--regles)}
+.g.bump .g-track{animation:bump .5s}
+@keyframes bump{50%{transform:scaleY(1.8)}}
+.bar[data-mode="lecture"] .gauges{visibility:hidden}
+
+/* Page */
+main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:1.25rem 4rem}
+.wrap{max-width:62rem;margin:0 auto}
+.col{max-width:38rem;margin:0 auto}
+.eyebrow{font:600 .75rem/1.2 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:1.125rem;max-width:60ch}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:.75rem 1.25rem;border-radius:999px;border:1.5px solid var(--ink);background:var(--ink);color:var(--surface);font-weight:700;cursor:pointer;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn:hover{filter:brightness(1.15)}
+.row{display:flex;flex-wrap:wrap;gap:.75rem}
+
+/* Accueil : écran verrouillé */
+.lock{background:var(--ink);color:var(--paper);border-radius:28px;padding:1.75rem 1.25rem 1.5rem;display:grid;gap:1rem;position:relative;overflow:hidden}
+.lock .big{font:600 clamp(3.5rem,16vw,5.5rem)/.9 var(--f-mono);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.lock .day{font:500 .9rem/1.2 var(--f-mono);opacity:.75}
+.notif{background:color-mix(in srgb,var(--paper) 14%,transparent);border:1px solid color-mix(in srgb,var(--paper) 22%,transparent);border-radius:16px;padding:.7rem .85rem;display:grid;gap:.15rem}
+.notif .from{font:600 .7rem/1.2 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;opacity:.75;display:flex;justify-content:space-between;gap:.5rem}
+.notif p{font-size:.95rem;line-height:1.35}
+.intro{display:grid;gap:1.5rem}
+.intro h1{font-size:clamp(2.1rem,8vw,3.4rem);font-weight:800;letter-spacing:-.02em}
+.mission{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:1.1rem 1.1rem 1.2rem;display:grid;gap:.75rem}
+.mission h2{font-size:1.15rem}
+.legend{display:grid;gap:.6rem;margin:0;padding:0;list-style:none}
+.legend li{display:grid;grid-template-columns:.85rem 1fr;gap:.6rem;align-items:baseline}
+.dot{width:.85rem;height:.85rem;border-radius:50%;transform:translateY(.1rem)}
+.dot.p{background:var(--projet)} .dot.e{background:var(--energie)} .dot.r{background:var(--regles)}
+.fine{font-size:.875rem;color:var(--muted)}
+@media (min-width:56rem){
+  .intro{grid-template-columns:minmax(0,22rem) minmax(0,1fr);align-items:start;gap:2.5rem}
+}
+
+/* Scène */
+.scene{display:grid;gap:1.25rem}
+.scene-head{display:grid;gap:.6rem}
+.scene-head h2{font-size:clamp(1.7rem,6.5vw,2.5rem);font-weight:800;letter-spacing:-.015em}
+.scene-grid{display:grid;gap:1.25rem}
+@media (min-width:56rem){
+  .scene-grid{grid-template-columns:minmax(0,21rem) minmax(0,1fr);gap:2.5rem;align-items:start}
+  .scene-grid .phone{position:sticky;top:6.5rem}
+}
+.q{font-family:var(--f-display);font-size:1.25rem;font-weight:800;margin-bottom:.25rem}
+.choices{display:grid;gap:.6rem;margin:0;padding:0;list-style:none}
+.choice{width:100%;text-align:left;display:grid;grid-template-columns:2rem 1fr;gap:.6rem;align-items:start;padding:.85rem .9rem;border-radius:16px;border:1.5px solid var(--line);background:var(--surface);cursor:pointer;line-height:1.35;transition:border-color .15s,transform .15s}
+.choice:hover:not([disabled]){border-color:var(--ink);transform:translateY(-1px)}
+.choice .k{font:600 .85rem/2rem var(--f-mono);width:2rem;height:2rem;border-radius:50%;background:var(--tint);text-align:center}
+.choice[disabled]{cursor:default;opacity:.45}
+.choice.picked{opacity:1;border-color:var(--ink);background:var(--tint)}
+.choice.picked .k{background:var(--ink);color:var(--surface)}
+
+.outcome{display:grid;gap:1rem;animation:rise .45s ease-out}
+@keyframes rise{from{transform:translateY(8px);opacity:.3}}
+.result{background:var(--surface);border-radius:18px;border:1.5px solid var(--ink);padding:1rem 1.1rem;display:grid;gap:.75rem}
+.deltas{display:flex;flex-wrap:wrap;gap:.4rem}
+.delta{font:600 .78rem/1 var(--f-mono);padding:.4rem .6rem;border-radius:99px;border:1.5px solid currentColor;font-variant-numeric:tabular-nums}
+.delta.p{color:var(--projet)} .delta.e{color:var(--energie)} .delta.r{color:var(--regles)}
+.delta.zero{color:var(--muted);border-style:dashed}
+.event{background:var(--note);border-radius:14px;padding:.85rem 1rem;display:grid;gap:.4rem}
+.event .eyebrow{color:var(--ink)}
+
+.voices{display:grid;gap:.75rem}
+.voices h3,.why h3{font-size:1.05rem;font-weight:800}
+.quote{margin:0;padding:.1rem 0 .1rem 1rem;border-left:3px solid var(--line);display:grid;gap:.25rem}
+.quote p{font-size:1.02rem}
+.quote p::before{content:"« "} .quote p::after{content:" »"}
+.quote cite{font:500 .72rem/1.2 var(--f-mono);font-style:normal;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.why{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:1rem 1.1rem;display:grid;gap:.6rem}
+.meter{display:flex;align-items:center;flex-wrap:wrap;gap:.25rem .75rem}
+.pips{display:flex;gap:3px}
+.pip{width:.8rem;height:.8rem;border-radius:3px;background:var(--line)}
+.pip.on{background:var(--stop)}
+.meter span{font:600 .78rem/1.2 var(--f-mono);color:var(--muted)}
+.next{justify-self:start}
+
+/* Maquettes d'écran */
+.phone{background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:.9rem;display:grid;gap:.6rem;box-shadow:0 1px 0 var(--line),0 18px 40px -28px rgba(10,20,40,.45)}
+.app{display:flex;justify-content:space-between;align-items:center;gap:.5rem;font:600 .72rem/1.2 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 .2rem .35rem;border-bottom:1px solid var(--line)}
+.mail{display:grid;gap:.2rem;padding:.6rem .7rem;border-radius:12px;background:var(--paper);font-size:.9rem;line-height:1.4}
+.mail .who{font:600 .72rem/1.2 var(--f-mono);color:var(--muted)}
+.pill{display:inline-block;font:600 .7rem/1 var(--f-mono);letter-spacing:.04em;padding:.35rem .55rem;border-radius:99px;background:var(--stop-soft);color:var(--stop);text-transform:uppercase}
+.pill.wait{background:var(--note);color:var(--ink)}
+.pill.ok{background:var(--tint);color:var(--ink)}
+.search{display:flex;align-items:center;gap:.5rem;border:1.5px solid var(--line);border-radius:12px;padding:.55rem .7rem;font:500 .95rem var(--f-mono)}
+.search::before{content:"";width:.8rem;height:.8rem;border:2px solid var(--muted);border-radius:50%;flex:none}
+.empty{text-align:center;padding:1rem .5rem;color:var(--muted);font-size:.9rem;display:grid;gap:.25rem}
+.empty b{color:var(--ink);font-family:var(--f-display);font-size:1.1rem}
+.steps{list-style:none;margin:0;padding:0;display:grid}
+.steps li{display:grid;grid-template-columns:1.1rem 1fr auto;gap:.6rem;align-items:center;padding:.45rem 0;font-size:.9rem;position:relative}
+.steps li::before{content:"";width:.7rem;height:.7rem;border-radius:50%;border:2px solid var(--ink);background:var(--surface);justify-self:center;z-index:1}
+.steps li:not(:last-child)::after{content:"";position:absolute;left:.55rem;top:1.4rem;bottom:-.55rem;width:2px;background:var(--line)}
+.steps li.done::before{background:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem}
+.tile{background:var(--paper);border-radius:10px;padding:.55rem;font-size:.82rem;line-height:1.25}
+.lockcard{background:var(--ink);color:var(--paper);border-radius:14px;padding:.7rem .8rem;font-size:.9rem;display:grid;gap:.2rem}
+.lockcard .from{font:600 .68rem/1.2 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;opacity:.75}
+.cal{display:grid;gap:.35rem}
+.cal-head{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));font:500 .62rem/1.2 var(--f-mono);color:var(--muted);text-transform:uppercase}
+.cal-head span:nth-child(5){grid-column:5}
+.bar-ev{border-radius:8px;padding:.45rem .55rem;font-size:.8rem;line-height:1.2;font-weight:700}
+.bar-ev small{display:block;font:500 .66rem/1.3 var(--f-mono);font-weight:500;opacity:.8}
+.ev1{background:var(--tint);grid-column:1 / span 5}
+.ev2{background:var(--note);grid-column:3 / span 6}
+.cal-rows{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:.35rem 0}
+.clash{grid-column:3 / span 3;border:2px dashed var(--stop);border-radius:8px;text-align:center;font:600 .66rem/1.2 var(--f-mono);color:var(--stop);padding:.3rem;text-transform:uppercase}
+.chat{display:grid;gap:.4rem}
+.bub{max-width:85%;padding:.5rem .7rem;border-radius:14px;font-size:.9rem;line-height:1.35;background:var(--paper)}
+.bub.me{justify-self:end;background:var(--ink);color:var(--surface)}
+.bub small{display:block;font:500 .66rem/1.2 var(--f-mono);opacity:.7;margin-bottom:.1rem}
+.contacts{list-style:none;margin:0;padding:0;display:grid}
+.contacts li{display:grid;grid-template-columns:2.1rem 1fr;gap:.6rem;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--line);font-size:.9rem;line-height:1.3}
+.contacts li:last-child{border-bottom:0}
+.av{width:2.1rem;height:2.1rem;border-radius:50%;background:var(--tint);display:grid;place-items:center;font:600 .75rem var(--f-mono)}
+.contacts small{display:block;color:var(--muted);font-size:.8rem}
+.invite{display:grid;gap:.5rem}
+.invite h4{margin:0;font:800 1.1rem/1.2 var(--f-display)}
+.invite dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:.2rem .7rem;font-size:.85rem}
+.invite dt{font:600 .7rem/1.6 var(--f-mono);color:var(--muted);text-transform:uppercase}
+.invite dd{margin:0}
+.conflict{background:var(--stop-soft);color:var(--stop);border-radius:10px;padding:.5rem .7rem;font-size:.85rem;font-weight:700}
+.fakebtns{display:grid;grid-template-columns:1fr 1fr;gap:.4rem}
+.fakebtns span{border:1.5px solid var(--line);border-radius:10px;text-align:center;padding:.45rem;font-size:.85rem;font-weight:700}
+.thermo{display:flex;align-items:baseline;gap:.5rem}
+.thermo b{font:600 2.2rem/1 var(--f-mono);color:var(--stop)}
+
+/* Fin de journée */
+.end{display:grid;gap:2rem}
+.verdict{background:var(--ink);color:var(--paper);border-radius:24px;padding:1.4rem 1.25rem;display:grid;gap:.9rem}
+.verdict h2{font-size:clamp(2rem,8vw,3rem);font-weight:800}
+.verdict .eyebrow{color:inherit;opacity:.75}
+.final-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem}
+.final-g div{background:color-mix(in srgb,var(--paper) 12%,transparent);border-radius:14px;padding:.6rem .7rem}
+.final-g b{display:block;font:600 1.6rem/1.1 var(--f-mono);font-variant-numeric:tabular-nums}
+.final-g span{font:500 .68rem/1.2 var(--f-mono);text-transform:uppercase;letter-spacing:.05em;opacity:.8}
+.thesis{font-family:var(--f-display);font-size:clamp(1.35rem,4.8vw,1.9rem);font-weight:800;line-height:1.2;max-width:34ch}
+.section-h{display:grid;gap:.4rem;margin-bottom:.9rem}
+.section-h h2{font-size:clamp(1.5rem,5.5vw,2.1rem);font-weight:800}
+.recap{list-style:none;margin:0;padding:0;display:grid;gap:.1rem}
+.recap li{display:grid;grid-template-columns:3.4rem minmax(0,1fr) auto;gap:.75rem;align-items:center;padding:.65rem 0;border-bottom:1px solid var(--line)}
+.recap .t{font:600 .85rem var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.recap .name{font-weight:700;line-height:1.25}
+.pistes{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr))}
+.piste{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:1rem 1.05rem;display:grid;gap:.45rem;align-content:start}
+.piste .eyebrow{color:var(--stop)}
+.piste h3{font-size:1.12rem;font-weight:800}
+.piste p{font-size:.97rem}
+.works{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
+.works li{background:var(--tint);border-radius:14px;padding:.75rem .9rem}
+.method{border-top:1px solid var(--line);padding-top:1.25rem;display:grid;gap:.6rem;font-size:.92rem;color:var(--muted);max-width:65ch}
+.method strong{color:var(--ink)}
+
+/* Lecture */
+.read-scene{border-top:2px solid var(--ink);padding-top:1.5rem;margin-top:2.5rem}
+.opt-list{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
+.opt-list li{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.8rem .9rem;display:grid;gap:.4rem}
+.opt-list .lab{font-weight:700}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="bar" id="bar">
+  <div class="bar-in">
+    <div class="clock" id="clock" aria-live="polite">08:00<small>Lundi</small></div>
+    <div class="gauges" id="gauges" aria-label="Vos jauges">
+      <div class="g p"><div class="g-top"><span>Projet</span><b id="vp">20</b></div><div class="g-track"><div class="g-fill" id="fp" style="width:20%"></div></div></div>
+      <div class="g e"><div class="g-top"><span>Énergie</span><b id="ve">80</b></div><div class="g-track"><div class="g-fill" id="fe" style="width:80%"></div></div></div>
+      <div class="g r"><div class="g-top"><span>Règles</span><b id="vr">100</b></div><div class="g-track"><div class="g-fill" id="fr" style="width:100%"></div></div></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap" id="view">
+    <!-- Écran d'accueil (rendu aussi par le script) -->
+    <section class="intro">
+      <div class="lock" aria-hidden="true">
+        <div><div class="big">08:00</div><div class="day">Lundi · Tourcoing</div></div>
+        <div class="notif"><div class="from"><span>Services techniques</span><span>sem. 3</span></div><p>Chauffage : demande toujours en attente.</p></div>
+        <div class="notif"><div class="from"><span>Ressources humaines</span><span>hier</span></div><p>Action requise : formulaire obligatoire.</p></div>
+        <div class="notif"><div class="from"><span>Agenda</span><span>17:45</span></div><p>Invitation : journée passerelle.</p></div>
+      </div>
+      <div style="display:grid;gap:1.25rem">
+        <p class="eyebrow">Semaine de la transformation publique</p>
+        <h1>Une journée à la mairie</h1>
+        <p class="lede">Vous êtes agent de la ville de Tourcoing. Aujourd’hui, vous devez faire avancer un projet monté avec d’autres directions. Huit situations, huit choix.</p>
+        <div class="row"><a class="btn" href="#jouer">Commencer la journée</a><a class="btn ghost" href="#lecture">Lire sans jouer</a></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- Données : tirées de dix comptes rendus d'entretien ---------- */
+var START = {p:20, e:80, r:100};
+
+var SCENES = [
+{ id:'chauffage', time:'08:12', tag:'Demandes sans retour', n:5,
+  title:'Il fait 15 °C dans votre bureau',
+  ctx:'Le chauffage est en panne depuis plusieurs semaines. Vos collègues travaillent en manteau. Vous avez déjà relancé plusieurs fois.',
+  mock:'mail',
+  options:[
+    {label:'Appeler directement le technicien que vous connaissez', out:'Il décroche, aimable, vous explique la panne, puis ajoute : « Je vous rappelle que la procédure, c’est l’adresse mail, pour la validation. Cet échange-ci n’est pas valable. » Vous savez tout, et rien n’est enclenché.', d:{p:0,e:-5,r:-5}},
+    {label:'Écrire, une fois de plus, à l’adresse de procédure', out:'Votre demande part dans une boîte commune. Pas d’accusé de réception, pas de délai, pas de nom. Vous ne saurez ni qui la traite, ni quand.', d:{p:0,e:-10,r:0}},
+    {label:'Demander à votre responsable de faire remonter', out:'Votre responsable écrit à sa direction, qui écrit à l’architecture, qui écrit aux services techniques. La chaîne s’allonge. Le radiateur reste froid.', d:{p:-5,e:-5,r:0}}
+  ],
+  voices:[
+    ['On travaille par 15 degrés grand maximum. C’est un vrai problème de bien-être au travail.','Responsable de service'],
+    ['Une fois que la demande est envoyée, quelquefois il n’y a aucun retour.','Responsable d’équipement'],
+    ['Les agents techniques viennent intervenir sans prévenir et repartent sans faire de retour.','Responsable d’équipement'],
+    ['On doit assurer le ménage d’un local, mais on ne nous fournit pas d’aspirateur, et nous n’avons pas de ligne budgétaire pour en acheter un.','Responsable d’établissement'],
+    ['Jusqu’à dix personnes dans la boucle, et six mois pour une commande qui en mériterait bien moins.','Responsable d’établissement']
+  ],
+  why:'Les demandes adressées aux services techniques, à l’architecture ou à la logistique partent dans des circuits sans suivi visible : pas de numéro, pas de statut, pas de délai. Ces services manquent eux-mêmes de bras, avec des postes non remplacés. Faute de retour, les agents relancent, contournent ou abandonnent.'
+},
+{ id:'annuaire', time:'09:30', tag:'Qui fait quoi ?', n:6,
+  title:'Qui s’occupe du mécénat ?',
+  ctx:'Votre projet a besoin d’un partenaire privé. Un service de la ville s’en occupe peut-être. Vous ne savez pas lequel, ni qui.',
+  mock:'search',
+  options:[
+    {label:'Chercher « mécénat » dans l’annuaire des agents', out:'Aucun résultat. L’annuaire cherche par nom de famille : pour trouver la bonne personne, il faut déjà la connaître.', d:{p:0,e:-5,r:0}},
+    {label:'Demander à la personne du secrétariat qui connaît tout le monde', out:'Elle aurait su. Elle est en congés jusqu’à lundi. Sans elle, personne ne sait.', d:{p:0,e:-5,r:0}},
+    {label:'Chercher vous-même des mécènes, comme d’habitude', out:'Trois jours de démarches. Vous découvrirez dans six mois qu’un service mécénat existe, avec des professionnels du sujet.', d:{p:5,e:-15,r:0}}
+  ],
+  voices:[
+    ['C’est une grande maison, mais il est difficile de savoir concrètement qui fait quoi, et où.','Responsable d’équipement'],
+    ['Il faut déjà savoir exactement qui l’on veut contacter, connaître son nom, pour le trouver dans l’annuaire.','Responsable d’équipement'],
+    ['Je découvre qu’il existe un service mécénat. J’ai peut-être perdu plein de temps à chercher moi-même, alors qu’il y a un pro là-dessus.','Chargé·e de projets'],
+    ['On est informé par un vague organigramme. Ce qui m’intéresse, c’est de savoir avec qui je vais travailler.','Chargé·e de projets'],
+    ['On nous confond avec un autre service : on doit lui renvoyer les demandeurs, et inversement.','Agent de terrain'],
+    ['La secrétaire est une véritable personne-ressource. Problème quand elle est en congés.','Responsable d’équipement']
+  ],
+  why:'Près de 2 000 agents, des directions qui fusionnent, un annuaire sans missions ni photos : personne ne sait vraiment qui fait quoi. Cette connaissance repose sur quelques personnes-ressources et sur la mémoire de chacun.'
+},
+{ id:'validation', time:'10:45', tag:'Validations en cascade', n:6,
+  title:'Il vous faut l’accord d’une autre direction',
+  ctx:'Pour votre projet, vous avez besoin d’un créneau et d’un peu de matériel d’un service qui dépend d’une autre direction. Vous connaissez l’agent concerné.',
+  mock:'chain',
+  options:[
+    {label:'Appeler l’agent directement', out:'Réglé en cinq minutes. Mais ni votre direction ni la sienne ne sont au courant. Au moindre problème, vous en porterez seul·e la responsabilité.', d:{p:10,e:0,r:-10}},
+    {label:'Passer par la voie hiérarchique', out:'Votre demande monte : responsable, direction, direction générale, élu·e. La réponse arrive trois semaines plus tard. L’activité a déjà eu lieu.', d:{p:-5,e:-5,r:5}},
+    {label:'Appeler l’agent, en mettant votre responsable en copie', out:'C’est ainsi que fonctionnent les projets qui marchent : on règle entre agents, la hiérarchie est informée. À condition d’avoir un cadre validé en amont, ce qui n’est pas le cas aujourd’hui.', d:{p:5,e:-5,r:-5}}
+  ],
+  voices:[
+    ['Je ne peux pas me permettre de sauter au-dessus de la voie hiérarchique pour solliciter d’autres directions. Ça n’est pas du tout dans les mœurs.','Responsable de service'],
+    ['La structure attend la réponse, et l’activité est déjà terminée.','Agent de terrain'],
+    ['On ne sait pas où une demande a été bloquée, ni comment s’expliquer avec la personne qui l’a refusée.','Responsable d’établissement'],
+    ['Je ne vais pas demander l’autorisation à un autre directeur pour appeler un agent et décaler un horaire.','Chargé·e de projets'],
+    ['Une partie des gens estiment être couverts par ce fonctionnement : la responsabilité revient toujours au chef de service.','Responsable de service']
+  ],
+  why:'Hors projet, la règle reste pyramidale : toute sollicitation d’une autre direction monte puis redescend. La chaîne hiérarchique protège ceux qui l’appliquent, mais elle allonge chaque décision. Quand un cadre est validé en amont, les agents se parlent directement, et ça fonctionne.'
+},
+{ id:'procedure', time:'11:20', tag:'Procédures invisibles', n:3,
+  title:'Une règle que personne n’a annoncée',
+  ctx:'Message des ressources humaines : votre absence pour formation du mois dernier n’apparaît pas. Votre direction vous demande où vous étiez ce jour-là.',
+  mock:'notif',
+  options:[
+    {label:'Chercher la procédure sur l’intranet', out:'Elle existe, quelque part entre le menu du restaurant municipal et le règlement intérieur. Il vous faut vingt-cinq minutes pour comprendre qu’un formulaire est désormais obligatoire.', d:{p:0,e:-10,r:5}},
+    {label:'Appeler le service formation', out:'« Oui, il y a une nouvelle procédure. Nous n’avons pas encore informé les agents, mais il faut quand même la faire. »', d:{p:0,e:-5,r:5}},
+    {label:'Laisser tomber : la formation a bien eu lieu', out:'Pour l’administration, vous étiez absent·e sans motif ce jour-là. Il faudra régulariser plus tard, avec un mail de plus.', d:{p:0,e:0,r:-10}}
+  ],
+  voices:[
+    ['Le service formation m’a dit ne pas avoir encore informé les agents sur cette nouvelle procédure. Mais il fallait quand même la faire.','Responsable de service'],
+    ['On ne les connaît pas toutes, parce qu’elles sont beaucoup trop nombreuses. Et puis elles ne nous sont pas expliquées.','Chargé·e de projets'],
+    ['Les gens n’ont pas mis le lien en favori : il s’est perdu dans le flux de mails.','Responsable d’équipement'],
+    ['Les procédures ne nous embêtent pas tant que ça quand elles sont connues et claires. Quand ce n’est pas le cas, ça dysfonctionne.','Responsable de service']
+  ],
+  why:'Les procédures changent sans être annoncées ni expliquées. L’intranet, alimenté par la seule communication interne, mêle informations pratiques et règles obligatoires : on n’y va que lorsqu’on a déjà un problème.'
+},
+{ id:'urgence', interlude:true, time:'12:30', tag:'Urgence descendante',
+  title:'Imprévu : « pour demain matin »',
+  ctx:'Un élu demande un point d’étape sur un autre dossier, pour demain matin. Votre après-midi vient de rétrécir.',
+  d:{p:-10,e:-10,r:0},
+  voices:[
+    ['Quand il y a des injonctions de temporalité où tout devient urgence, ça crée énormément de stress, ça met en péril le projet, et ça crée de la tension entre agents.','Responsable de service'],
+    ['Les sollicitations sont très descendantes. La connaissance du terrain n’est pas assez prise en compte dans les décisions.','Chargé·e de mission']
+  ]
+},
+{ id:'calendrier', time:'14:00', tag:'Silos et doublons', n:6,
+  title:'Vous fixez la date de votre événement',
+  ctx:'Votre action pour les familles aura lieu en mars. Il faut arrêter la date et lancer la communication.',
+  mock:'cal',
+  options:[
+    {label:'Consulter le tableau partagé de la programmation', out:'Le tableau existe. Chacun y note ses dates, mais personne ne le lit pour repérer les doublons. Rien n’y signale de conflit.', d:{p:5,e:-5,r:0}},
+    {label:'Appeler les directions que vous connaissez', out:'Vous évitez les conflits avec les services que vous connaissez. Pas avec les autres.', d:{p:5,e:-10,r:0}},
+    {label:'Fixer la date et lancer la communication', out:'C’est lancé, rapidement.', d:{p:10,e:0,r:0}}
+  ],
+  event:{text:'Quelques semaines plus tard, vous découvrez qu’une autre direction organise, le même mois, un événement pour le même public. Communication, public, présence le jour J : vous voilà en concurrence.', d:{p:-10,e:0,r:0}},
+  voices:[
+    ['Découverte tardive : un mois consacré aux tout-petits tombe en même temps qu’un festival pour le jeune public, en mars-avril.','Chargé·e de mission'],
+    ['Il n’y a pas de coordination des directions. Logique des services en silos.','Gestionnaire'],
+    ['Le tableau de la programmation informe, mais personne ne repère les doublons ni ne co-construit.','Chargé·e de mission'],
+    ['Quand on ne sait pas où l’on va, aucun vent n’est favorable.','Chargé·e de mission'],
+    ['Chacun est dans son monde de travail.','Responsable d’équipement']
+  ],
+  why:'Les directions collaborent projet par projet, sans orientation commune ni coordination d’ensemble. Il en résulte des doublons, des événements concurrents et des agents mobilisés sur des projets similaires, aux dépens de l’argent public.'
+},
+{ id:'outils', time:'15:10', tag:'Outils inadaptés', n:9,
+  title:'Réunir huit partenaires, dont trois extérieurs',
+  ctx:'Il faut caler une réunion avec des collègues de trois directions et des partenaires extérieurs à la ville.',
+  mock:'chat',
+  options:[
+    {label:'Créer un groupe sur une messagerie grand public', out:'Tout le monde répond en dix minutes. Mais c’est formellement interdit par la direction informatique, pour des raisons de sécurité.', d:{p:15,e:0,r:-15}},
+    {label:'Utiliser l’espace documentaire officiel et le mail', out:'Les partenaires extérieurs n’y ont pas accès. Le lien part par mail et se perd dans le flux.', d:{p:0,e:-10,r:5}},
+    {label:'Envoyer un mail à tous, tout le monde en copie', out:'Une trace écrite, c’est sûr. Douze « répondre à tous » plus tard, la date est presque fixée.', d:{p:5,e:-5,r:0}}
+  ],
+  voices:[
+    ['C’est interdit formellement par la direction de l’informatique.','Responsable de service'],
+    ['On ne fait que ça.','Chargé·e de projets, juste après'],
+    ['Il n’y a pas d’outil concret qui permette de faire le lien entre les différents acteurs au quotidien.','Responsable d’équipement'],
+    ['Le service informatique n’a ni le temps ni les moyens humains de développer des outils pour les agents.','Responsable d’établissement'],
+    ['Pas de messagerie instantanée pour moi : le mail, pour garder une trace écrite.','Chargé·e de mission']
+  ],
+  why:'Les outils officiels (intranet, espace de partage, mail) servent à diffuser ou à stocker, pas à travailler ensemble au quotidien, et ils excluent les partenaires extérieurs. Les agents comblent le vide avec des outils non autorisés, ou s’en tiennent au mail, au prix de leur temps.'
+},
+{ id:'reseau', time:'16:30', tag:'Tout repose sur votre réseau', n:5,
+  title:'Votre contact a changé de direction',
+  ctx:'Avec les fusions de directions de l’été, l’agent avec qui vous travailliez a changé de service et de bureau. Il vous faut un nouvel interlocuteur.',
+  mock:'contacts',
+  options:[
+    {label:'Consulter l’organigramme mis à jour', out:'Vous y trouvez le nom du nouveau directeur. Pas celui de la personne qui travaillera avec vous, ni ses missions.', d:{p:0,e:-5,r:0}},
+    {label:'Appeler une ancienne collègue de votre réseau', out:'Elle vous donne le bon nom en deux minutes. Ça marche tant que vous avez ce réseau. Un nouvel arrivant, lui, n’en a pas.', d:{p:10,e:0,r:0}},
+    {label:'Écrire à la nouvelle direction pour demander un référent', out:'Votre demande entre dans le circuit. Un référent sera désigné prochainement.', d:{p:0,e:-5,r:5}}
+  ],
+  voices:[
+    ['J’ai tout misé sur mon relationnel. Les groupes de travail ne se sont constitués que parce que je connais mes interlocuteurs.','Responsable de service'],
+    ['Le travail de mise en relation est souvent peu visible : ça se règle entre nous, et il n’en émerge pas grand-chose.','Chargé·e de projets'],
+    ['Je m’appuie sur mon propre réseau. Davantage de contacts permettrait de mener plus de projets.','Chargé·e de mission'],
+    ['Les échanges se font bien entre agents. C’est une forme de solidarité.','Chargé·e de mission']
+  ],
+  why:'Quand la coopération fonctionne, c’est grâce aux réseaux personnels construits au fil des années. C’est efficace, mais fragile : un départ, une réorganisation ou un congé suffit à tout casser. Et ce travail de mise en relation n’est ni vu, ni valorisé.'
+},
+{ id:'passerelle', time:'17:45', tag:'Rencontres imposées', n:5,
+  title:'Invitation : journée passerelle',
+  ctx:'Une journée d’échanges entre services est organisée. La date a été calée sur l’agenda des élus. Elle tombe un jour d’ouverture au public.',
+  mock:'invite',
+  options:[
+    {label:'Y aller, et fermer au public ce jour-là', out:'Une matinée en amphithéâtre, des présentations descendantes. Vous échangez avec deux personnes à la pause.', d:{p:-5,e:-5,r:5}},
+    {label:'Décliner : le public passe avant', out:'Vous restez à votre poste. Vous ne rencontrerez pas les collègues des autres directions. La précédente édition remonte à des années.', d:{p:0,e:0,r:-5}},
+    {label:'Envoyer un collègue à votre place', out:'Votre collègue y va à contrecœur. Les contacts qu’il noue resteront les siens.', d:{p:0,e:-5,r:0}}
+  ],
+  voices:[
+    ['À partir du moment où ça nous est imposé, on estime que ce n’est pas très productif.','Responsable de service'],
+    ['Ce sont des informations très descendantes, plutôt que des discussions entre services.','Responsable d’équipement'],
+    ['Un format spectacle, inadapté à des publics allant de la catégorie A+ à la catégorie C.','Chargé·e de mission'],
+    ['Une fois par semestre, c’est jouable. Mais il faut que ce soit bien organisé.','Responsable d’équipement'],
+    ['Que chacun vienne sur le terrain de l’autre.','Chargé·e de mission']
+  ],
+  why:'Les temps d’interconnaissance sont rares, imposés et pensés sans tenir compte des services ouverts au public. Le besoin est pourtant réel : les agents demandent des rencontres régulières, choisies, et des immersions chez les autres.'
+}
+];
+
+var PISTES = [
+  {for:'Qui fait quoi ?', title:'Un annuaire « qui fait quoi »', text:'Pour chaque agent : ses missions, une photo, des mots-clés. Une recherche par sujet (« mécénat », « tournage »), mise à jour à chaque réorganisation.'},
+  {for:'Demandes sans retour', title:'Un suivi visible des demandes', text:'Chaque demande aux services techniques reçoit un numéro, un statut et un délai indicatif, consultables par le demandeur. L’adresse de procédure devient un guichet qui répond.'},
+  {for:'Validations en cascade', title:'Des validations proportionnées', text:'Planning et logistique se règlent d’agent à agent, la hiérarchie informée. La validation formelle reste réservée à ce qui engage : budget, public, communication externe.'},
+  {for:'Procédures invisibles', title:'Des règles annoncées avant d’être exigées', text:'Une rubrique datée des nouvelles procédures sur l’intranet, une phrase d’explication pour chacune, et un délai avant leur entrée en vigueur.'},
+  {for:'Silos et doublons', title:'Un calendrier commun et un cap partagé', text:'Un agenda unique des temps forts, consulté avant de programmer, et des orientations fixées par la direction générale, que chaque service décline à sa manière.'},
+  {for:'Outils inadaptés', title:'Des outils qui suivent les usages', text:'Une messagerie instantanée autorisée et ouverte aux partenaires. Un intranet où les agents peuvent publier (réussites, contacts, méthodes) avec une validation légère.'},
+  {for:'Tout repose sur votre réseau', title:'Des référents, et un travail de lien reconnu', text:'Un référent désigné par chaque direction pour les projets communs. La mise en relation valorisée dans les bilans de projet, au lieu de rester invisible.'},
+  {for:'Rencontres imposées', title:'Des rencontres choisies', text:'Des immersions d’une journée dans un autre service, et des réunions entre managers sur la base du volontariat, une fois par semestre, à des dates compatibles avec l’accueil du public.'}
+];
+
+var WORKS = [
+  'Le mode projet : un cadre validé en amont par la hiérarchie, puis les agents se parlent directement.',
+  'Des réunions mensuelles entre managers de toutes directions, sur la base du volontariat.',
+  'Les réunions de préparation des grands événements de la ville : très concrètes, donc efficaces.'
+];
+
+/* ---------- Maquettes d'écran ---------- */
+function mock(kind){
+  switch(kind){
+  case 'mail': return '<div class="phone" aria-hidden="true"><div class="app"><span>Messagerie</span><span>08:12</span></div>'+
+    '<div class="thermo"><b>15 °C</b><span class="fine">dans le bureau</span></div>'+
+    '<div class="mail"><span class="who">Vous → Services techniques</span>Bonjour, avez-vous des nouvelles pour la chaudière ? Nous sommes toujours sans chauffage.</div>'+
+    '<div class="mail"><span class="who">Relance · Relance · Relance</span>Pas de réponse.</div>'+
+    '<span class="pill">Demande en attente · sans suivi</span></div>';
+  case 'search': return '<div class="phone" aria-hidden="true"><div class="app"><span>Annuaire des agents</span><span>09:30</span></div>'+
+    '<div class="search">mécénat</div><div class="empty"><b>Aucun résultat</b>Recherche possible par nom et prénom uniquement.</div></div>';
+  case 'chain': return '<div class="phone" aria-hidden="true"><div class="app"><span>Circuit de validation</span><span>10:45</span></div><ol class="steps">'+
+    '<li class="done"><span>Vous</span><span class="pill ok">Envoyé</span></li>'+
+    '<li class="done"><span>Votre responsable</span><span class="pill ok">Transmis</span></li>'+
+    '<li><span>Votre direction</span><span class="pill wait">À valider</span></li>'+
+    '<li><span>Direction générale</span><span class="pill wait">À valider</span></li>'+
+    '<li><span>Élu·e</span><span class="pill wait">À valider</span></li>'+
+    '<li><span>L’autre direction</span><span class="pill">Pas encore informée</span></li></ol></div>';
+  case 'notif': return '<div class="phone" aria-hidden="true"><div class="app"><span>Intranet</span><span>11:20</span></div>'+
+    '<div class="lockcard"><span class="from">Ressources humaines</span>Votre absence pour formation n’apparaît pas. Un formulaire est désormais obligatoire.</div>'+
+    '<div class="tiles"><div class="tile">Menu du restaurant municipal</div><div class="tile">Procédures RH</div><div class="tile">Télétravail : procédure informatique</div><div class="tile">Règlement intérieur</div><div class="tile">Visites pour les agents</div><div class="tile">Nouveautés : <b>aucune</b></div></div></div>';
+  case 'cal': return '<div class="phone" aria-hidden="true"><div class="app"><span>Programmation</span><span>Mars – avril</span></div><div class="cal">'+
+    '<div class="cal-head"><span>1 mars</span><span></span><span></span><span></span><span>1 avr.</span></div>'+
+    '<div class="cal-rows"><div class="bar-ev ev1">Votre action familles<small>Votre direction</small></div>'+
+    '<div class="bar-ev ev2">Événement même public<small>Autre direction</small></div>'+
+    '<div class="clash">Mêmes dates, même public</div></div></div></div>';
+  case 'chat': return '<div class="phone" aria-hidden="true"><div class="app"><span>Groupe « Réunion projet » · 8</span><span>15:10</span></div><div class="chat">'+
+    '<div class="bub"><small>Partenaire extérieur</small>Je n’ai pas accès à votre espace de documents.</div>'+
+    '<div class="bub"><small>Collègue, autre direction</small>Mardi 14h ?</div>'+
+    '<div class="bub me">Mardi 14h, c’est noté.</div></div>'+
+    '<span class="pill">Messagerie non autorisée</span></div>';
+  case 'contacts': return '<div class="phone" aria-hidden="true"><div class="app"><span>Mes contacts</span><span>16:30</span></div><ul class="contacts">'+
+    '<li><span class="av">V</span><span>Le collègue de la voirie<small>Pour les autorisations de tournage</small></span></li>'+
+    '<li><span class="av">S</span><span>La personne du secrétariat<small>Connaît tout le monde · en congés</small></span></li>'+
+    '<li><span class="av">J</span><span>La référente jeunesse<small>A changé de direction cet été</small></span></li>'+
+    '<li><span class="av">?</span><span>Service mécénat<small>Découvert cette année</small></span></li></ul>'+
+    '<span class="pill wait">Écrit nulle part ailleurs</span></div>';
+  case 'invite': return '<div class="phone" aria-hidden="true"><div class="app"><span>Agenda</span><span>17:45</span></div><div class="invite">'+
+    '<h4>Journée passerelle</h4><dl><dt>Date</dt><dd>Calée sur l’agenda des élus</dd><dt>Format</dt><dd>Présentations en amphithéâtre</dd><dt>Présence</dt><dd>Attendue</dd></dl>'+
+    '<div class="conflict">Conflit : jour d’ouverture au public</div><div class="fakebtns"><span>Accepter</span><span>Refuser</span></div></div></div>';
+  }
+  return '';
+}
+
+/* ---------- État ---------- */
+var g = {p:START.p, e:START.e, r:START.r};
+var step = 0;
+var history = [];
+var view = document.getElementById('view');
+var bar = document.getElementById('bar');
+var clock = document.getElementById('clock');
+
+function clamp(v){return Math.max(0, Math.min(100, v));}
+function esc(s){return String(s).replace(/[&<>"]/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+function paint(changed){
+  [['p','vp','fp'],['e','ve','fe'],['r','vr','fr']].forEach(function(k){
+    document.getElementById(k[1]).textContent = g[k[0]];
+    document.getElementById(k[2]).style.width = g[k[0]] + '%';
+    var el = document.getElementById(k[2]).closest('.g');
+    if (changed && changed[k[0]]) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  });
+}
+function apply(d){
+  g.p = clamp(g.p + (d.p||0)); g.e = clamp(g.e + (d.e||0)); g.r = clamp(g.r + (d.r||0));
+  paint(d);
+}
+function setClock(t, label){ clock.innerHTML = esc(t) + '<small>' + esc(label || 'Lundi') + '</small>'; }
+
+function deltaChips(d){
+  var names = {p:'Projet', e:'Énergie', r:'Règles'};
+  return '<div class="deltas">' + ['p','e','r'].map(function(k){
+    var v = d[k]||0;
+    var s = v > 0 ? '+' + v : (v < 0 ? '−' + Math.abs(v) : '±0');
+    return '<span class="delta ' + k + (v===0?' zero':'') + '">' + names[k] + ' ' + s + '</span>';
+  }).join('') + '</div>';
+}
+function voicesHTML(s){
+  return '<div class="voices"><h3>Ce qu’on a entendu</h3>' + s.voices.map(function(v){
+    return '<blockquote class="quote"><p>' + esc(v[0]) + '</p><cite>' + esc(v[1]) + '</cite></blockquote>';
+  }).join('') + '</div>';
+}
+function meterHTML(n){
+  var pips = ''; for (var i=0;i<10;i++) pips += '<span class="pip' + (i<n?' on':'') + '"></span>';
+  return '<div class="meter" role="img" aria-label="Évoqué dans ' + n + ' entretiens sur 10"><span class="pips">' + pips + '</span><span>Évoqué dans ' + n + ' entretiens sur 10</span></div>';
+}
+function whyHTML(s){
+  return '<div class="why"><h3>Pourquoi ça bloque</h3><p>' + esc(s.why) + '</p>' + meterHTML(s.n) + '</div>';
+}
+function sceneCount(){ return SCENES.filter(function(s){return !s.interlude;}).length; }
+function sceneIndex(i){ var c=0; for (var k=0;k<=i;k++) if(!SCENES[k].interlude) c++; return c; }
+
+/* ---------- Vues ---------- */
+function renderIntro(){
+  bar.dataset.mode = 'jeu';
+  g = {p:START.p, e:START.e, r:START.r}; paint(); step = 0; history = [];
+  setClock('08:00','Lundi');
+  view.innerHTML =
+  '<section class="intro">'+
+    '<div class="lock" aria-hidden="true"><div><div class="big">08:00</div><div class="day">Lundi · Tourcoing</div></div>'+
+      '<div class="notif"><div class="from"><span>Services techniques</span><span>sem. 3</span></div><p>Chauffage : demande toujours en attente.</p></div>'+
+      '<div class="notif"><div class="from"><span>Ressources humaines</span><span>hier</span></div><p>Action requise : formulaire obligatoire.</p></div>'+
+      '<div class="notif"><div class="from"><span>Agenda</span><span>17:45</span></div><p>Invitation : journée passerelle.</p></div></div>'+
+    '<div style="display:grid;gap:1.25rem">'+
+      '<p class="eyebrow">Semaine de la transformation publique</p>'+
+      '<h1>Une journée à la mairie</h1>'+
+      '<p class="lede">Vous êtes agent de la ville de Tourcoing. Aujourd’hui, vous devez faire avancer un projet monté avec d’autres directions : une action pour les familles d’un quartier, prévue en mars.</p>'+
+      '<div class="mission"><h2>Huit situations, trois jauges</h2>'+
+        '<ul class="legend">'+
+          '<li><span class="dot p"></span><span><b>Projet</b> : votre projet avance-t-il ?</span></li>'+
+          '<li><span class="dot e"></span><span><b>Énergie</b> : ce que la journée vous coûte.</span></li>'+
+          '<li><span class="dot r"></span><span><b>Règles</b> : restez-vous dans le cadre prévu ?</span></li>'+
+        '</ul>'+
+        '<p class="fine">Chaque situation est tirée de dix entretiens menés avec des agents de la ville. Les citations sont réelles, les personnes ne sont pas identifiées.</p></div>'+
+      '<div class="row"><button class="btn" id="go" type="button">Commencer la journée</button><button class="btn ghost" id="read" type="button">Lire sans jouer</button></div>'+
+    '</div>'+
+  '</section>';
+  document.getElementById('go').onclick = function(){ step = 0; renderStep(); };
+  document.getElementById('read').onclick = function(){ location.hash = 'lecture'; };
+}
+
+function renderStep(){
+  var s = SCENES[step];
+  if (!s) return renderEnd();
+  window.scrollTo({top:0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+  setClock(s.time, s.interlude ? 'Imprévu' : 'Situation ' + sceneIndex(step) + '/' + sceneCount());
+  if (s.interlude) return renderInterlude(s);
+  view.innerHTML =
+  '<article class="scene">'+
+    '<header class="scene-head"><p class="eyebrow">' + s.time + ' · ' + esc(s.tag) + '</p><h2>' + esc(s.title) + '</h2><p class="lede">' + esc(s.ctx) + '</p></header>'+
+    '<div class="scene-grid">' + mock(s.mock) +
+      '<div style="display:grid;gap:1.1rem;min-width:0">'+
+        '<div><p class="q">Que faites-vous ?</p></div>'+
+        '<ul class="choices">' + s.options.map(function(o,i){
+          return '<li><button type="button" class="choice" data-i="' + i + '"><span class="k">' + 'ABC'[i] + '</span><span>' + esc(o.label) + '</span></button></li>';
+        }).join('') + '</ul>'+
+        '<div id="out" aria-live="polite"></div>'+
+      '</div>'+
+    '</div>'+
+  '</article>';
+  Array.prototype.forEach.call(view.querySelectorAll('.choice'), function(b){
+    b.addEventListener('click', function(){ choose(s, +b.dataset.i); });
+  });
+}
+
+function choose(s, i){
+  var o = s.options[i];
+  Array.prototype.forEach.call(view.querySelectorAll('.choice'), function(b){
+    b.disabled = true; if (+b.dataset.i === i) b.classList.add('picked');
+  });
+  apply(o.d);
+  history.push({id:s.id, i:i});
+  var ev = '';
+  if (s.event){
+    ev = '<div class="event"><span class="eyebrow">Imprévu</span><p>' + esc(s.event.text) + '</p>' + deltaChips(s.event.d) + '</div>';
+    setTimeout(function(){ apply(s.event.d); }, 900);
+  }
+  var nxt = SCENES[step+1];
+  var out = document.getElementById('out');
+  out.innerHTML =
+    '<div class="outcome">'+
+      '<div class="result"><span class="eyebrow">Ce qui se passe</span><p>' + esc(o.out) + '</p>' + deltaChips(o.d) + '</div>' + ev +
+      voicesHTML(s) + whyHTML(s) +
+      '<button class="btn next" type="button" id="next">' + (nxt ? 'Continuer · ' + nxt.time : 'Fin de journée') + '</button>'+
+    '</div>';
+  document.getElementById('next').onclick = function(){ step++; renderStep(); };
+  out.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start'});
+}
+
+function renderInterlude(s){
+  view.innerHTML =
+  '<article class="scene col">'+
+    '<header class="scene-head"><p class="eyebrow">' + s.time + ' · ' + esc(s.tag) + '</p><h2>' + esc(s.title) + '</h2></header>'+
+    '<div class="event" style="padding:1.1rem 1.15rem"><p class="lede">' + esc(s.ctx) + '</p>' + deltaChips(s.d) + '</div>'+
+    voicesHTML(s) +
+    '<button class="btn next" type="button" id="next">Continuer · ' + SCENES[step+1].time + '</button>'+
+  '</article>';
+  setTimeout(function(){ apply(s.d); }, 500);
+  document.getElementById('next').onclick = function(){ step++; renderStep(); };
+}
+
+function profile(){
+  var p=g.p, e=g.e, r=g.r, out;
+  if (p >= 35 && r <= 80) out = {name:'Système D', text:'Votre projet avance, grâce à votre réseau et à quelques contournements. C’est ainsi que travaillent beaucoup d’agents : efficace, mais fragile, invisible, et parfois hors des règles.'};
+  else if (r >= 85 && p <= 25) out = {name:'Dans les clous', text:'Vous avez tout fait dans les règles. Votre projet n’a presque pas bougé.'};
+  else out = {name:'Équilibriste', text:'Un pas dans les règles, un pas à côté. Vous avez avancé un peu, au prix de compromis permanents.'};
+  if (e <= 35) out.tired = 'Et vous finissez la journée à bout.';
+  return out;
+}
+
+function recapHTML(){
+  return '<ul class="recap">' + SCENES.filter(function(s){return !s.interlude;}).map(function(s){
+    var pips=''; for (var i=0;i<10;i++) pips += '<span class="pip' + (i<s.n?' on':'') + '"></span>';
+    return '<li><span class="t">' + s.time + '</span><span class="name">' + esc(s.tag) + '</span><span class="pips" role="img" aria-label="' + s.n + ' entretiens sur 10">' + pips + '</span></li>';
+  }).join('') + '</ul><p class="fine" style="margin-top:.6rem">Nombre d’entretiens, sur dix, où le problème a été évoqué.</p>';
+}
+function pistesHTML(){
+  return '<div class="pistes">' + PISTES.map(function(x){
+    return '<div class="piste"><span class="eyebrow">' + esc(x.for) + '</span><h3>' + esc(x.title) + '</h3><p>' + esc(x.text) + '</p></div>';
+  }).join('') + '</div>';
+}
+function tailHTML(){
+  return ''+
+  '<section><div class="section-h"><p class="eyebrow">Ce que disent dix entretiens</p><h2>Les huit blocages de la journée</h2></div>' + recapHTML() + '</section>'+
+  '<section><div class="section-h"><p class="eyebrow">Pistes d’amélioration</p><h2>Pour ne plus avoir à choisir</h2><p class="lede">Aucune de ces pistes ne demande aux agents d’en faire plus. Elles changent le cadre dans lequel ils travaillent.</p></div>' + pistesHTML() + '</section>'+
+  '<section><div class="section-h"><p class="eyebrow">Sur quoi s’appuyer</p><h2>Ce qui marche déjà</h2></div><ul class="works">' + WORKS.map(function(w){return '<li>' + esc(w) + '</li>';}).join('') + '</ul></section>'+
+  '<footer class="method"><p><strong>Méthode.</strong> Dix entretiens menés les 3 et 4 novembre 2026 avec des agents de la ville de Tourcoing, par des élèves attachés de l’IRA de Lille, dans le cadre de la Semaine de la transformation publique. Les situations sont recomposées ; les citations sont issues des comptes rendus, parfois resserrées, sans identification des personnes.</p>'+
+  '<p><strong>Limite.</strong> Aucun agent des services techniques, des ressources humaines, de la direction informatique ou de la direction générale n’a été interrogé. Leur point de vue manque à ce tableau.</p></footer>';
+}
+
+function renderEnd(){
+  setClock('18:30','Fin de journée');
+  var pr = profile();
+  window.scrollTo({top:0});
+  view.innerHTML =
+  '<div class="end">'+
+    '<section class="verdict"><p class="eyebrow">18:30 · Votre profil</p><h2>' + esc(pr.name) + '</h2><p>' + esc(pr.text) + (pr.tired ? ' <b>' + esc(pr.tired) + '</b>' : '') + '</p>'+
+      '<div class="final-g"><div><b>' + g.p + '</b><span>Projet</span></div><div><b>' + g.e + '</b><span>Énergie</span></div><div><b>' + g.r + '</b><span>Règles</span></div></div>'+
+      '<p class="fine" style="color:inherit;opacity:.8">Ah, et le chauffage ne marche toujours pas.</p></section>'+
+    '<p class="thesis">Aucun parcours ne permet de faire avancer le projet, de rester dans les règles et de garder son énergie. Le problème ne vient pas des agents, mais de l’organisation dans laquelle ils travaillent.</p>'+
+    '<div class="row"><button class="btn" type="button" id="again">Rejouer autrement</button><button class="btn ghost" type="button" id="read2">Lire toutes les situations</button></div>'+
+    tailHTML()+
+  '</div>';
+  document.getElementById('again').onclick = function(){ if (location.hash === '#jouer') renderIntroThenPlay(); else location.hash = 'jouer'; };
+  document.getElementById('read2').onclick = function(){ location.hash = 'lecture'; };
+}
+
+function renderRead(){
+  bar.dataset.mode = 'lecture';
+  setClock('08:00 → 18:30','Mode lecture');
+  window.scrollTo({top:0});
+  var html = '<div class="col" style="max-width:46rem">'+
+    '<p class="eyebrow">Mode lecture</p><h1 style="font-size:clamp(2rem,7vw,3rem);font-weight:800;margin:.4rem 0 1rem">Une journée à la mairie</h1>'+
+    '<p class="lede">Les huit situations de la journée, avec les trois choix possibles et leurs conséquences, ce qu’ont dit les agents, et pourquoi ça bloque.</p>'+
+    '<div class="row" style="margin-top:1rem"><button class="btn" type="button" id="play">Jouer plutôt</button></div>';
+  SCENES.forEach(function(s){
+    html += '<section class="read-scene scene"><header class="scene-head"><p class="eyebrow">' + s.time + ' · ' + esc(s.tag) + '</p><h2>' + esc(s.title) + '</h2><p class="lede">' + esc(s.ctx) + '</p></header>';
+    if (s.interlude){
+      html += '<div class="event"><span class="eyebrow">Imprévu</span>' + deltaChips(s.d) + '</div>';
+    } else {
+      html += '<ul class="opt-list">' + s.options.map(function(o,i){
+        return '<li><span class="lab">' + 'ABC'[i] + '. ' + esc(o.label) + '</span><p>' + esc(o.out) + '</p>' + deltaChips(o.d) + '</li>';
+      }).join('') + '</ul>';
+      if (s.event) html += '<div class="event"><span class="eyebrow">Imprévu</span><p>' + esc(s.event.text) + '</p>' + deltaChips(s.event.d) + '</div>';
+    }
+    html += voicesHTML(s) + (s.why ? whyHTML(s) : '') + '</section>';
+  });
+  html += '<div class="end" style="margin-top:3rem"><p class="thesis">Aucun parcours ne permet de faire avancer le projet, de rester dans les règles et de garder son énergie. Le problème ne vient pas des agents, mais de l’organisation dans laquelle ils travaillent.</p>' + tailHTML() + '</div></div>';
+  view.innerHTML = html;
+  document.getElementById('play').onclick = function(){ location.hash = 'jouer'; };
+}
+
+function renderIntroThenPlay(){ renderIntro(); bar.dataset.mode = 'jeu'; step = 0; renderStep(); }
+
+function route(){
+  var h = location.hash.replace('#','');
+  if (h === 'lecture') renderRead();
+  else if (h === 'jouer') renderIntroThenPlay();
+  else renderIntro();
+}
+window.addEventListener('hashchange', route);
+route();
+})();
+</script>
+</body>
+</html>
